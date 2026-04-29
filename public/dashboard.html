@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insighta Labs — Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/dashboard" class="brand">Insighta Labs+</a>
+    <ul>
+      <li><a href="/dashboard" class="active">Dashboard</a></li>
+      <li><a href="/profiles">Profiles</a></li>
+      <li><a href="/search">Search</a></li>
+      <li><a href="/account">Account</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Dashboard</h1>
+      <form action="/logout" method="POST" id="logout-form">
+        <input type="hidden" name="_csrf" id="csrf-field">
+        <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+      </form>
+    </div>
+
+    <div class="stats-grid" id="stats">
+      <div class="stat-card">
+        <div class="number" id="total-profiles">—</div>
+        <div class="label">Total Profiles</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="male-count">—</div>
+        <div class="label">Male Profiles</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="female-count">—</div>
+        <div class="label">Female Profiles</div>
+      </div>
+      <div class="stat-card">
+        <div class="number" id="countries-count">—</div>
+        <div class="label">Countries</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Welcome back, <span id="username">...</span></h2>
+      <p style="color:#636e72; margin-top:0.5rem">
+        Role: <span id="user-role" class="badge">—</span>
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Recent Profiles</h3>
+      <div id="recent-loading" class="loading">Loading...</div>
+      <table id="recent-table" style="display:none">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>Age</th>
+            <th>Country</th>
+          </tr>
+        </thead>
+        <tbody id="recent-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Get CSRF token from cookie
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? match[2] : null;
+    }
+
+    // Set CSRF token in form
+    document.getElementById('csrf-field').value = getCookie('csrf_token') || '';
+
+    // Handle logout with CSRF header
+    document.getElementById('logout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': getCookie('csrf_token') || '',
+          'X-API-Version': '1',
+        },
+      });
+      window.location.href = '/login.html';
+    });
+
+    async function loadDashboard() {
+      try {
+        // Load user info
+        const headers = { 'X-API-Version': '1' };
+        const meRes = await fetch('/api/me', { headers });
+        if (meRes.status === 401 || meRes.status === 403) {
+           window.location.href = '/login.html'; 
+           return; 
+          }
+        const me = await meRes.json();
+        document.getElementById('username').textContent = me.data.username;
+        const roleBadge = document.getElementById('user-role');
+        roleBadge.textContent = me.data.role;
+        roleBadge.className = `badge badge-${me.data.role}`;
+
+        // Load total profiles
+        const allRes = await fetch('/api/profiles?limit=1', { headers });
+        const allData = await allRes.json();
+        document.getElementById('total-profiles').textContent = allData.total?.toLocaleString() || '—';
+
+        // Load male count
+        const maleRes = await fetch('/api/profiles?gender=male&limit=1', { headers });
+        const maleData = await maleRes.json();
+        document.getElementById('male-count').textContent = maleData.total?.toLocaleString() || '—';
+
+        // Load female count
+        const femaleRes = await fetch('/api/profiles?gender=female&limit=1', { headers });
+        const femaleData = await femaleRes.json();
+        document.getElementById('female-count').textContent = femaleData.total?.toLocaleString() || '—';
+
+        document.getElementById('countries-count').textContent = '30+';
+
+        // Load recent profiles
+        const recentRes = await fetch('/api/profiles?limit=5', { headers });
+        const recentData = await recentRes.json();
+        const tbody = document.getElementById('recent-tbody');
+        recentData.data.forEach(p => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><a href="/profile/${p.id}" style="color:#0984e3;text-decoration:none">${p.name}</a></td>
+            <td><span class="badge badge-${p.gender}">${p.gender}</span></td>
+            <td>${p.age} (${p.age_group})</td>
+            <td>${p.country_name}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById('recent-loading').style.display = 'none';
+        document.getElementById('recent-table').style.display = 'table';
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insighta Labs — Profiles</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/dashboard" class="brand">Insighta Labs+</a>
+    <ul>
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/profiles" class="active">Profiles</a></li>
+      <li><a href="/search">Search</a></li>
+      <li><a href="/account">Account</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Profiles</h1>
+        <button type="button" class="btn btn-dark btn-sm" onclick="exportProfiles()">Export CSV</button>
+    </div>
+
+    <div class="card">
+      <div class="filters">
+        <div class="filter-group">
+          <label>Gender</label>
+          <select id="filter-gender">
+            <option value="">All</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Age Group</label>
+          <select id="filter-age-group">
+            <option value="">All</option>
+            <option value="child">Child</option>
+            <option value="teenager">Teenager</option>
+            <option value="adult">Adult</option>
+            <option value="senior">Senior</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Country ID</label>
+          <input type="text" id="filter-country" maxlength="2">
+        </div>
+
+        <div class="filter-group">
+          <label>Min Age</label>
+          <input type="number" id="filter-min-age">
+        </div>
+
+        <div class="filter-group">
+          <label>Max Age</label>
+          <input type="number" id="filter-max-age">
+        </div>
+
+        <div class="filter-group">
+          <label>Sort By</label>
+          <select id="filter-sort">
+            <option value="created_at">Created At</option>
+            <option value="age">Age</option>
+            <option value="gender_probability">Gender Prob.</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Order</label>
+          <select id="filter-order">
+            <option value="desc">Desc</option>
+            <option value="asc">Asc</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary btn-sm" onclick="loadProfiles(1)">Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading" class="loading">Loading profiles...</div>
+
+    <table id="profiles-table" style="display:none">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Gender</th>
+          <th>Age</th>
+          <th>Age Group</th>
+          <th>Country</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="profiles-tbody"></tbody>
+    </table>
+
+    <div class="pagination" id="pagination" style="display:none">
+      <button id="prev-btn" onclick="changePage(-1)">← Prev</button>
+      <span id="page-info">Page 1</span>
+      <button id="next-btn" onclick="changePage(1)">Next →</button>
+    </div>
+
+    <!-- ADMIN ONLY -->
+    <div class="card admin-only">
+      <h3>Create Profile</h3>
+
+      <input id="name" placeholder="Name">
+
+      <button class="btn btn-primary" onclick="createProfile()">Create</button>
+    </div>
+  </div>
+
+  <script src="/js/utils.js"></script>
+
+  <script>
+    let currentPage = 1;
+    let totalPages = 1;
+    let me = null;
+
+    async function initAuth() {
+      try {
+        me = await getMe();
+
+        if (me.data.role !== 'admin') {
+          document.querySelectorAll('.admin-only')
+            .forEach(el => el.style.display = 'none');
+        }
+      } catch {
+        window.location.href = '/login.html';
+      }
+    }
+
+    function getFilters() {
+      const params = new URLSearchParams();
+
+      const gender = document.getElementById('filter-gender').value;
+      const ageGroup = document.getElementById('filter-age-group').value;
+      const country = document.getElementById('filter-country').value;
+      const minAge = document.getElementById('filter-min-age').value;
+      const maxAge = document.getElementById('filter-max-age').value;
+      const sortBy = document.getElementById('filter-sort').value;
+      const order = document.getElementById('filter-order').value;
+
+      if (gender) params.set('gender', gender);
+      if (ageGroup) params.set('age_group', ageGroup);
+      if (country) params.set('country_id', country.toUpperCase());
+      if (minAge) params.set('min_age', minAge);
+      if (maxAge) params.set('max_age', maxAge);
+      if (sortBy) params.set('sort_by', sortBy);
+      if (order) params.set('order', order);
+
+      return params;
+    }
+
+    async function loadProfiles(page = 1) {
+      currentPage = page;
+
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('profiles-table').style.display = 'none';
+      document.getElementById('pagination').style.display = 'none';
+
+      try {
+        const params = getFilters();
+        params.set('page', page);
+        params.set('limit', 10);
+
+        const data = await api(`/api/profiles?${params.toString()}`);
+
+        totalPages = data.total_pages;
+
+        const tbody = document.getElementById('profiles-tbody');
+        tbody.innerHTML = '';
+
+        data.data.forEach(p => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${p.name}</td>
+              <td><span class="badge badge-${p.gender}">${p.gender}</span></td>
+              <td>${p.age}</td>
+              <td>${p.age_group}</td>
+              <td>${p.country_name}</td>
+              <td><a href="/profile/${p.id}" class="btn btn-primary btn-sm">View</a></td>
+            </tr>
+          `;
+        });
+
+        document.getElementById('page-info').textContent =
+          `Page ${currentPage} of ${totalPages} (${data.total} total)`;
+
+        document.getElementById('prev-btn').disabled = currentPage <= 1;
+        document.getElementById('next-btn').disabled = currentPage >= totalPages;
+
+        document.getElementById('profiles-table').style.display = 'table';
+        document.getElementById('pagination').style.display = 'flex';
+
+      } catch (err) {
+        showError('Failed to load profiles');
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    async function createProfile() {
+      try {
+        const body = {
+          name: document.getElementById('name').value.trim()
+        };
+
+        if (!body.name) {
+          showError('Name is required');
+          return;
+        }
+
+        await api('/api/profiles', {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+
+        document.getElementById('name').value = '';
+        loadProfiles();
+      } catch (err) {
+        showError('Failed to create profile');
+      }
+    }
+
+    function exportProfiles() {
+      const params = getFilters();
+      params.set('format', 'csv');
+      window.location.href = `/api/profiles/export?${params.toString()}`;
+    }
+
+    function changePage(dir) {
+      const newPage = currentPage + dir;
+      if (newPage >= 1 && newPage <= totalPages) {
+        loadProfiles(newPage);
+      }
+    }
+
+    initAuth();
+    loadProfiles(1);
+  </script>
+</body>
+</html>

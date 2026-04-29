@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insighta Labs — Profile</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="/dashboard" class="brand">Insighta Labs+</a>
+  <ul>
+    <li><a href="/dashboard">Dashboard</a></li>
+    <li><a href="/profiles">Profiles</a></li>
+    <li><a href="/search">Search</a></li>
+    <li><a href="/account">Account</a></li>
+  </ul>
+</nav>
+
+<div class="container">
+
+  <div class="page-header">
+    <h1>Profile Detail</h1>
+    <a href="/profiles" class="btn btn-sm" style="background:#dfe6e9;color:#2d3436;">← Back to Profiles</a>
+  </div>
+
+  <div id="loading" class="loading">Loading profile...</div>
+  <div id="error-msg" class="alert alert-error" style="display:none"></div>
+
+  <div class="card" id="profile-card" style="display:none">
+    <div class="detail-grid" id="profile-grid"></div>
+  </div>
+
+</div>
+
+<script src="/js/utils.js"></script>
+<script>
+async function loadProfile() {
+  const id = window.location.pathname.split('/').pop();
+
+  try {
+    const data = await api(`/api/profiles/${id}`);
+
+    if (!data) return; // api() handles redirect on 401/403
+
+    if (data.status === 'error' || !data.data) {
+      document.getElementById('loading').style.display = 'none';
+      const errEl = document.getElementById('error-msg');
+      errEl.textContent = data.message || 'Profile not found.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const p = data.data;
+
+    document.getElementById('profile-grid').innerHTML = `
+      <div class="detail-item">
+        <label>Name</label>
+        <span>${p.name}</span>
+      </div>
+      <div class="detail-item">
+        <label>Gender</label>
+        <span><span class="badge badge-${p.gender}">${p.gender}</span></span>
+      </div>
+      <div class="detail-item">
+        <label>Age</label>
+        <span>${p.age}</span>
+      </div>
+      <div class="detail-item">
+        <label>Age Group</label>
+        <span>${p.age_group}</span>
+      </div>
+      <div class="detail-item">
+        <label>Country</label>
+        <span>${p.country_name} (${p.country_id})</span>
+      </div>
+      <div class="detail-item">
+        <label>Gender Confidence</label>
+        <span>${(p.gender_probability * 100).toFixed(1)}%</span>
+      </div>
+      <div class="detail-item">
+        <label>Country Confidence</label>
+        <span>${p.country_probability ? (p.country_probability * 100).toFixed(1) + '%' : '—'}</span>
+      </div>
+      <div class="detail-item">
+        <label>Created</label>
+        <span>${new Date(p.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</span>
+      </div>
+    `;
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('profile-card').style.display = 'block';
+
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    const errEl = document.getElementById('error-msg');
+    errEl.textContent = 'Failed to load profile. Please try again.';
+    errEl.style.display = 'block';
+  }
+}
+
+loadProfile();
+</script>
+
+</body>
+</html>

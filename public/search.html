@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insighta Labs — Search</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/dashboard" class="brand">Insighta Labs+</a>
+    <ul>
+      <li><a href="/dashboard">Dashboard</a></li>
+      <li><a href="/profiles">Profiles</a></li>
+      <li><a href="/search" class="active">Search</a></li>
+      <li><a href="/account">Account</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Natural Language Search</h1>
+    </div>
+
+    <div class="card">
+      <div class="search-box">
+        <input id="query" type="text" placeholder="e.g. senior females from Nigeria age 30+"
+          onkeydown="if(event.key==='Enter') searchProfiles()" />
+        <button class="btn btn-primary" onclick="searchProfiles()">Search</button>
+      </div>
+    </div>
+
+    <div id="loading" class="loading" style="display:none">Searching...</div>
+    <div id="no-results" style="display:none; text-align:center; color:#636e72; padding:2rem;">No results found.</div>
+    <div id="error-msg" class="alert alert-error" style="display:none"></div>
+
+    <table id="results" style="display:none">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Gender</th>
+          <th>Age</th>
+          <th>Country</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script src="/js/utils.js"></script>
+  <script>
+    async function requireAuth() {
+      const me = await getMe();
+      if (!me?.data) {
+        window.location.href = '/login.html';
+        return null;
+      }
+      return me.data;
+    }
+
+    async function searchProfiles() {
+      const q = document.getElementById('query').value.trim();
+      if (!q) return;
+
+      // Reset UI
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('no-results').style.display = 'none';
+      document.getElementById('error-msg').style.display = 'none';
+
+      try {
+        const data = await api(`/api/profiles/search?q=${encodeURIComponent(q)}`);
+
+        document.getElementById('loading').style.display = 'none';
+
+        if (!data?.data || data.data.length === 0) {
+          document.getElementById('no-results').style.display = 'block';
+          return;
+        }
+
+        const tbody = document.getElementById('tbody');
+        tbody.innerHTML = '';
+
+        data.data.forEach(p => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${p.name}</td>
+              <td><span class="badge badge-${p.gender}">${p.gender}</span></td>
+              <td>${p.age}</td>
+              <td>${p.country_name}</td>
+              <td><a href="/profile/${p.id}" class="btn btn-primary btn-sm">View</a></td>
+            </tr>
+          `;
+        });
+
+        document.getElementById('results').style.display = 'table';
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loading').style.display = 'none';
+        const errEl = document.getElementById('error-msg');
+        errEl.textContent = 'Search failed. Please try again.';
+        errEl.style.display = 'block';
+      }
+    }
+
+    requireAuth();
+  </script>
+</body>
+</html>
