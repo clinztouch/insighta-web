@@ -203,10 +203,9 @@ app.post('/logout', csrfProtect, async (req, res) => {
   res.redirect('/login.html');
 });
 
-const server = app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, () => {
   console.log(` Insighta Web Portal is running!`);
   console.log(`→ http://localhost:${PORT}`);
-  console.log(`→ http://127.0.0.1:${PORT}`);
 });
 
 server.on('error', (err) => {
