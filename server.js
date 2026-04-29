@@ -7,7 +7,7 @@ const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
+const HOST = process.env.HOST || '0.0.0.0';
 const API_BASE_URL = (process.env.API_BASE_URL || 'https://insighta-api-production-74ec.up.railway.app').replace(/\/$/, '');
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL;
 
