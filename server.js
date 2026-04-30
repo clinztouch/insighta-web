@@ -133,6 +133,7 @@ app.post('/auth/refresh', csrfProtect, async (req, res) => {
 
 app.get('/api/me', requireApiAuth, async (req, res) => {
   try {
+    console.log('Access token:', req.cookies.access_token);
     const response = await axios.get(`${API_BASE_URL}/auth/me`, {
       headers: {
         Authorization: `Bearer ${req.cookies.access_token}`,
@@ -141,6 +142,7 @@ app.get('/api/me', requireApiAuth, async (req, res) => {
     });
     res.json(response.data);
   } catch (err) {
+    console.error('ME error:', err.response?.status, err.response?.data);
     res.status(err.response?.status || 500).json({ status: 'error', message: 'Server error' });
   }
 });
