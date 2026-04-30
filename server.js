@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-const fs = require('fs');
 const axios = require('axios');
 const crypto = require('crypto');
 
@@ -11,14 +10,12 @@ const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 const API_BASE_URL = (process.env.API_BASE_URL || 'https://insighta-api-production-74ec.up.railway.app').replace(/\/$/, '');
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL;
-const FRONTEND_DIST = path.join(__dirname, 'insighta-frontend', 'dist');
-const FRONTEND_INDEX = path.join(FRONTEND_DIST, 'index.html');
 
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static(FRONTEND_DIST));
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((req, res, next) => {
   if (req.method === 'GET' && !req.cookies.csrf_token) {
@@ -29,7 +26,6 @@ app.use((req, res, next) => {
       maxAge: 30 * 60 * 1000,
     });
   }
-
   next();
 });
 
@@ -51,15 +47,6 @@ function cookieOptions(maxAge) {
     sameSite: 'lax',
     maxAge,
   };
-}
-
-function sendReactApp(req, res) {
-  if (fs.existsSync(FRONTEND_INDEX)) {
-    return res.sendFile(FRONTEND_INDEX);
-  }
-
-  const fallbackPage = req.path.startsWith('/profile/') ? 'profile.html' : `${req.path.replace(/^\//, '')}.html`;
-  return res.sendFile(path.join(__dirname, 'public', fallbackPage));
 }
 
 // Auth Middleware
@@ -85,7 +72,7 @@ function csrfProtect(req, res, next) {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 60 * 1000
+      maxAge: 30 * 60 * 1000,
     });
     req.csrfToken = token;
     return next();
@@ -107,7 +94,6 @@ app.get('/auth/github', (req, res) => {
   const githubAuthURL = new URL('/auth/github', API_BASE_URL);
   githubAuthURL.searchParams.set('client', 'web');
   githubAuthURL.searchParams.set('web_redirect_uri', `${getPublicBaseUrl(req)}/auth/callback`);
-
   res.redirect(githubAuthURL.toString());
 });
 
@@ -118,8 +104,8 @@ app.get('/auth/callback', (req, res) => {
     return res.redirect('/login.html?error=auth_failed');
   }
 
-  res.cookie('access_token', access_token, cookieOptions(3 * 60 * 1000));
-  res.cookie('refresh_token', refresh_token, cookieOptions(5 * 60 * 1000));
+  res.cookie('access_token', access_token, cookieOptions(15 * 60 * 1000));
+  res.cookie('refresh_token', refresh_token, cookieOptions(7 * 24 * 60 * 60 * 1000));
   res.redirect('/dashboard');
 });
 
@@ -140,8 +126,8 @@ app.post('/auth/refresh', csrfProtect, async (req, res) => {
       return res.status(response.status).json(response.data);
     }
 
-    res.cookie('access_token', response.data.access_token, cookieOptions(3 * 60 * 1000));
-    res.cookie('refresh_token', response.data.refresh_token, cookieOptions(5 * 60 * 1000));
+    res.cookie('access_token', response.data.access_token, cookieOptions(15 * 60 * 1000));
+    res.cookie('refresh_token', response.data.refresh_token, cookieOptions(7 * 24 * 60 * 60 * 1000));
     res.json({ status: 'success' });
   } catch (err) {
     res.status(500).json({ status: 'error', message: 'Server error' });
@@ -152,19 +138,15 @@ app.post('/auth/refresh', csrfProtect, async (req, res) => {
 // Pages
 // ======================
 app.get('/', (req, res) => res.redirect('/login.html'));
-app.get('/login.html', sendReactApp);
-app.get('/login', (req, res) => res.redirect('/login.html'));
 
 app.get('/dashboard', requirePageAuth, (req, res) => {
-  sendReactApp(req, res);
+  res.sendFile(path.join(__dirname, 'public/dashboard.html'));
 });
 
-app.get('/profiles', requirePageAuth, sendReactApp);
-app.get('/profile/:id', requirePageAuth, sendReactApp);
-app.get('/search', requirePageAuth, sendReactApp);
-app.get('/account', requirePageAuth, sendReactApp);
-
-app.use(express.static(path.join(__dirname, 'public')));
+app.get('/profiles', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/profiles.html')));
+app.get('/profile/:id', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/profile.html')));
+app.get('/search', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/search.html')));
+app.get('/account', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/account.html')));
 
 // ======================
 // API Proxy Routes
@@ -196,7 +178,9 @@ app.all(/^\/api\/.*/, requireApiAuth, async (req, res) => {
   }
 });
 
+// ======================
 // Logout
+// ======================
 app.post('/logout', csrfProtect, async (req, res) => {
   try {
     if (req.cookies.refresh_token) {
@@ -219,21 +203,22 @@ app.post('/logout', csrfProtect, async (req, res) => {
   res.redirect('/login.html');
 });
 
+// ======================
+// Server
+// ======================
 const server = app.listen(PORT, HOST, () => {
-  console.log(` Insighta Web Portal is running!`);
+  console.log(`Insighta Web Portal is running!`);
   console.log(`→ http://${HOST}:${PORT}`);
 });
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Stop the other process or set a different PORT in .env.`);
+    console.error(`Port ${PORT} is already in use.`);
     process.exit(1);
   }
-
   if (err.code === 'EPERM') {
-    console.error(`Unable to listen on ${HOST}:${PORT}. Try setting HOST=127.0.0.1 or using a different PORT.`);
+    console.error(`Unable to listen on ${HOST}:${PORT}.`);
     process.exit(1);
   }
-
   throw err;
 });
