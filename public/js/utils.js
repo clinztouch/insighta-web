@@ -154,3 +154,11 @@ window.utils = {
   getCookie,
   refreshToken,
 };
+
+// Expose as globals for inline scripts
+window.api = api;
+window.getMe = getMe;
+window.getCookie = getCookie;
+window.logout = logout;
+window.enforceRole = enforceRole;
+window.refreshToken = refreshToken;
