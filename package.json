@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "npm --prefix insighta-frontend run build"
+    "build": "echo 'No build step"
   },
   "keywords": [],
   "author": "clinztouch",
