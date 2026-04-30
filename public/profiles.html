@@ -123,18 +123,21 @@
     let totalPages = 1;
     let me = null;
 
-    async function initAuth() {
-      try {
-        me = await getMe();
-
-        if (me.data.role !== 'admin') {
-          document.querySelectorAll('.admin-only')
-            .forEach(el => el.style.display = 'none');
-        }
-      } catch {
-        window.location.href = '/login.html';
-      }
+   async function initAuth() {
+  try {
+    me = await getMe();
+    if (!me?.data) {  
+      window.location.href = '/login.html';
+      return;
     }
+    if (me.data.role !== 'admin') {
+      document.querySelectorAll('.admin-only')
+        .forEach(el => el.style.display = 'none');
+    }
+  } catch {
+    window.location.href = '/login.html';
+  }
+}
 
     function getFilters() {
       const params = new URLSearchParams();
