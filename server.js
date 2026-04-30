@@ -95,14 +95,6 @@ app.get('/auth/github', (req, res) => {
 });
 
 app.get('/auth/callback', (req, res) => {
-  const { access_token, refresh_token } = req.query;
-
-  if (!access_token || !refresh_token) {
-    return res.redirect('/login.html?error=auth_failed');
-  }
-
-  res.cookie('access_token', access_token, cookieOptions(15 * 60 * 1000));
-  res.cookie('refresh_token', refresh_token, cookieOptions(7 * 24 * 60 * 60 * 1000));
   res.redirect('/dashboard');
 });
 
