@@ -91,6 +91,7 @@ function csrfProtect(req, res, next) {
 // Auth Routes
 
 app.get('/auth/github', (req, res) => {
+  console.log('Redirecting to:', `${API_BASE_URL}/auth/github`);
   res.redirect(`${API_BASE_URL}/auth/github`);
 });
 
