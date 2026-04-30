@@ -43,10 +43,11 @@ function cookieOptions(maxAge) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'none',
     maxAge,
   };
 }
+
 
 // Auth Middleware
 function requirePageAuth(req, res, next) {
