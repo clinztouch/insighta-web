@@ -15,7 +15,6 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((req, res, next) => {
   if (req.method === 'GET' && !req.cookies.csrf_token) {
@@ -29,9 +28,9 @@ app.use((req, res, next) => {
   next();
 });
 
-
+// ======================
 // Helpers
-
+// ======================
 function generateCsrfToken() {
   return crypto.randomBytes(64).toString('hex');
 }
@@ -87,11 +86,10 @@ function csrfProtect(req, res, next) {
   next();
 }
 
-
+// ======================
 // Auth Routes
-
+// ======================
 app.get('/auth/github', (req, res) => {
-  console.log('Redirecting to:', `${API_BASE_URL}/auth/github`);
   res.redirect(`${API_BASE_URL}/auth/github`);
 });
 
@@ -146,8 +144,9 @@ app.get('/api/me', requireApiAuth, async (req, res) => {
   }
 });
 
+// ======================
 // Pages
-
+// ======================
 app.get('/', (req, res) => res.redirect('/login.html'));
 
 app.get('/dashboard', requirePageAuth, (req, res) => {
@@ -159,9 +158,9 @@ app.get('/profile/:id', requirePageAuth, (req, res) => res.sendFile(path.join(__
 app.get('/search', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/search.html')));
 app.get('/account', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/account.html')));
 
-
+// ======================
 // API Proxy Routes
-
+// ======================
 app.all(/^\/api\/.*/, requireApiAuth, async (req, res) => {
   try {
     const response = await axios.request({
@@ -189,9 +188,9 @@ app.all(/^\/api\/.*/, requireApiAuth, async (req, res) => {
   }
 });
 
-
+// ======================
 // Logout
-
+// ======================
 app.post('/logout', csrfProtect, async (req, res) => {
   try {
     if (req.cookies.refresh_token) {
@@ -214,18 +213,14 @@ app.post('/logout', csrfProtect, async (req, res) => {
   res.redirect('/login.html');
 });
 
-app.get('/debug', (req, res) => {
-  res.json({ 
-    API_BASE_URL, 
-    PORT, 
-    HOST, 
-    PUBLIC_BASE_URL,
-    cookies: req.cookies 
-  });
-});
+// ======================
+// Static Files (after routes)
+// ======================
+app.use(express.static(path.join(__dirname, 'public')));
 
+// ======================
 // Server
-
+// ======================
 const server = app.listen(PORT, HOST, () => {
   console.log(`Insighta Web Portal is running!`);
   console.log(`→ http://${HOST}:${PORT}`);
