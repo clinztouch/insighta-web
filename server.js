@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const fs = require('fs');
 const axios = require('axios');
 const crypto = require('crypto');
 
@@ -10,12 +11,14 @@ const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 const API_BASE_URL = (process.env.API_BASE_URL || 'https://insighta-api-production-74ec.up.railway.app').replace(/\/$/, '');
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL;
+const FRONTEND_DIST = path.join(__dirname, 'insighta-frontend', 'dist');
+const FRONTEND_INDEX = path.join(FRONTEND_DIST, 'index.html');
 
 app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(FRONTEND_DIST));
 
 app.use((req, res, next) => {
   if (req.method === 'GET' && !req.cookies.csrf_token) {
@@ -48,6 +51,15 @@ function cookieOptions(maxAge) {
     sameSite: 'lax',
     maxAge,
   };
+}
+
+function sendReactApp(req, res) {
+  if (fs.existsSync(FRONTEND_INDEX)) {
+    return res.sendFile(FRONTEND_INDEX);
+  }
+
+  const fallbackPage = req.path.startsWith('/profile/') ? 'profile.html' : `${req.path.replace(/^\//, '')}.html`;
+  return res.sendFile(path.join(__dirname, 'public', fallbackPage));
 }
 
 // Auth Middleware
@@ -140,15 +152,19 @@ app.post('/auth/refresh', csrfProtect, async (req, res) => {
 // Pages
 // ======================
 app.get('/', (req, res) => res.redirect('/login.html'));
+app.get('/login.html', sendReactApp);
+app.get('/login', (req, res) => res.redirect('/login.html'));
 
 app.get('/dashboard', requirePageAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/dashboard.html'));
+  sendReactApp(req, res);
 });
 
-app.get('/profiles', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/profiles.html')));
-app.get('/profile/:id', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/profile.html')));
-app.get('/search', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/search.html')));
-app.get('/account', requirePageAuth, (req, res) => res.sendFile(path.join(__dirname, 'public/account.html')));
+app.get('/profiles', requirePageAuth, sendReactApp);
+app.get('/profile/:id', requirePageAuth, sendReactApp);
+app.get('/search', requirePageAuth, sendReactApp);
+app.get('/account', requirePageAuth, sendReactApp);
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ======================
 // API Proxy Routes
