@@ -94,9 +94,30 @@ app.get('/auth/github', (req, res) => {
   res.redirect(`${API_BASE_URL}/auth/github`);
 });
 
+
 app.get('/auth/callback', (req, res) => {
-  res.redirect('/dashboard');
+  const { access_token, refresh_token } = req.query;
+
+  if (!access_token || !refresh_token) {
+    return res.redirect('/login.html?error=auth_failed');
+  }
+
+  res
+    .cookie('access_token', access_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 15 * 60 * 1000,
+    })
+    .cookie('refresh_token', refresh_token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
+    .redirect('/dashboard');
 });
+
 
 app.post('/auth/refresh', csrfProtect, async (req, res) => {
   try {
