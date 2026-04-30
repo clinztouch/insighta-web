@@ -213,6 +213,16 @@ app.post('/logout', csrfProtect, async (req, res) => {
   res.redirect('/login.html');
 });
 
+app.get('/debug', (req, res) => {
+  res.json({ 
+    API_BASE_URL, 
+    PORT, 
+    HOST, 
+    PUBLIC_BASE_URL,
+    cookies: req.cookies 
+  });
+});
+
 // Server
 
 const server = app.listen(PORT, HOST, () => {
