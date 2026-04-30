@@ -134,6 +134,21 @@ app.post('/auth/refresh', csrfProtect, async (req, res) => {
   }
 });
 
+
+app.get('/api/me', requireApiAuth, async (req, res) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${req.cookies.access_token}`,
+        'X-API-Version': '1',
+      },
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(err.response?.status || 500).json({ status: 'error', message: 'Server error' });
+  }
+});
+
 // ======================
 // Pages
 // ======================
