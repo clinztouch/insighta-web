@@ -199,6 +199,12 @@ https://insighta-api-production-74ec.up.railway.app/auth/github/callback
 | Search | `/search` |
 | Account | `/account` |
 
+
+## Role Enforcement
+- **admin**: Can create profiles, full access
+- **analyst**: Read-only access
+- Admin-only UI hidden via `.admin-only` CSS class
+
 ## Scripts
 
 ```bash
@@ -211,6 +217,12 @@ Both commands run:
 ```bash
 node server.js
 ```
+
+
+## Environment Variables
+NODE_ENV=production
+API_BASE_URL=https://insighta-api-production-0a80.up.railway.app
+PUBLIC_BASE_URL=https://insighta-web-production-df68.up.railway.app
 
 ## Pre-Deploy Checklist
 
